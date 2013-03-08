@@ -45,7 +45,7 @@ endif
 
 ifdef PHILZ_TOUCH_RECOVERY
 RECOVERY_VERSION := $(RECOVERY_NAME) 4
-PHILZ_BUILD := 4.87.1
+PHILZ_BUILD := 4.87.5
 CWM_BASE_VERSION := 6.0.2.8
 LOCAL_CFLAGS += -DPHILZ_BUILD="$(PHILZ_BUILD)"
 LOCAL_CFLAGS += -DCWM_BASE_VERSION="$(CWM_BASE_VERSION)"
@@ -66,7 +66,7 @@ LOCAL_CFLAGS += -DRECOVERY_API_VERSION=$(RECOVERY_API_VERSION)
 ##############################################################
 #Galaxy S3 International
 ifeq ($(TARGET_PRODUCT), cm_i9300)
-TARGET_DEVICE := i9300
+TARGET_DEVICE := i930x
 #TARGET_RECOVERY_PIXEL_FORMAT := \"RGBX_8888\"
 LOCAL_CFLAGS += -DTARGET_DEVICE_I9300
 ifdef PHILZ_TOUCH_RECOVERY
@@ -93,7 +93,7 @@ endif
 
 #Galaxy Note 2
 else ifeq ($(TARGET_PRODUCT), cm_n7100)
-TARGET_DEVICE := n7100
+TARGET_DEVICE := n710x-i317M-T889
 #TARGET_RECOVERY_PIXEL_FORMAT := \"RGBX_8888\"
 LOCAL_CFLAGS += -DTARGET_DEVICE_N7100
 ifdef PHILZ_TOUCH_RECOVERY
@@ -151,7 +151,7 @@ LOCAL_STATIC_LIBRARIES :=
 
 LOCAL_CFLAGS += -DUSE_EXT4
 LOCAL_C_INCLUDES += system/extras/ext4_utils
-LOCAL_STATIC_LIBRARIES += libext4_utils libz
+LOCAL_STATIC_LIBRARIES += libext4_utils_static libz libsparse_static
 
 # This binary is in the recovery ramdisk, which is otherwise a copy of root.
 # It gets copied there in config/Makefile.  LOCAL_MODULE_TAGS suppresses
@@ -166,7 +166,7 @@ else
   LOCAL_SRC_FILES += $(BOARD_CUSTOM_RECOVERY_KEYMAPPING)
 endif
 
-LOCAL_STATIC_LIBRARIES += libext4_utils libz
+LOCAL_STATIC_LIBRARIES += libext4_utils_static libz libsparse_static
 LOCAL_STATIC_LIBRARIES += libminzip libunz libmincrypt
 
 LOCAL_STATIC_LIBRARIES += libminizip libminadbd libedify libbusybox libmkyaffs2image libunyaffs liberase_image libdump_image libflash_image
