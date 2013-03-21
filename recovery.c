@@ -41,8 +41,8 @@
 #include "roots.h"
 #include "recovery_ui.h"
 
-//#include "adb_install.h"
 //removed to move sideload from main menu to install zip submenu
+//#include "adb_install.h"
 #include "minadbd/adb.h"
 
 #include "extendedcommands.h"
@@ -413,7 +413,7 @@ copy_sideloaded_package(const char* original_path) {
 
 static char**
 prepend_title(char** headers) {
-    char* title[] = { EXPAND(RECOVERY_VERSION),
+    char* title[] = { EXPAND(RECOVERY_MOD_VERSION),
                       NULL };
 
     // count the number of lines in our title, plus the
@@ -695,6 +695,7 @@ wipe_data(int confirm) {
         erase_volume("/external_sd/.android_secure");
     else if (volume_for_path("/emmc") != NULL)
         erase_volume("/emmc/.android_secure");
+    ui_print("Data wipe complete.\n");
 }
 
 int ui_menu_level = 1;
@@ -883,13 +884,12 @@ main(int argc, char **argv) {
 
     device_ui_init(&ui_parameters);
     ui_init();
-#ifndef PHILZ_TOUCH_RECOVERY
-    ui_print(EXPAND(RECOVERY_VERSION)"\n");
-#else
-    ui_print(EXPAND(RECOVERY_VERSION)"\n");
-    ui_print("CWM Base version: "EXPAND(CWM_BASE_VERSION)"\n");
-    LOGI("Build version: "EXPAND(PHILZ_BUILD)" - "EXPAND(TARGET_DEVICE)"\n");
-#endif
+    //ui_print(EXPAND(RECOVERY_VERSION)"\n");
+
+    ui_print(EXPAND(RECOVERY_MOD_VERSION) "\n");
+    ui_print("CWM Base version: " EXPAND(CWM_BASE_VERSION) "\n");
+    LOGI("Build version: " EXPAND(PHILZ_BUILD) " - " EXPAND(TARGET_NAME) "\n");
+
     load_volume_table();
     process_volumes();
     LOGI("Processing arguments.\n");
@@ -920,8 +920,21 @@ main(int argc, char **argv) {
         }
     }
 
+    struct selinux_opt seopts[] = {
+      { SELABEL_OPT_PATH, "/file_contexts" }
+    };
+
+    sehandle = selabel_open(SELABEL_CTX_FILE, seopts, 1);
+
+    if (!sehandle) {
+        fprintf(stderr, "Warning: No file_contexts\n");
+        // ui_print("Warning:  No file_contexts\n");
+    }
+
     LOGI("device_recovery_start()\n");
     device_recovery_start();
+    write_recovery_version();
+
     printf("Command:");
     for (arg = 0; arg < argc; arg++) {
         printf(" \"%s\"", argv[arg]);
@@ -948,6 +961,7 @@ main(int argc, char **argv) {
     printf("\n");
 
     int status = INSTALL_SUCCESS;
+
     if (update_package != NULL) {
         status = install_package(update_package);
         if (status != INSTALL_SUCCESS) ui_print("Installation aborted.\n");
@@ -987,8 +1001,7 @@ main(int argc, char **argv) {
         }
         if (0 == check_for_script_file("/cache/recovery/openrecoveryscript")) {
             LOGI("Running openrecoveryscript....\n");
-            no_wipe_confirm = 1;
-                //this is a script started at boot, do not confirm wipe operations
+            no_wipe_confirm = 1; //this is a script started at boot, do not confirm wipe operations
             int ret;
             if (0 == (ret = run_ors_script("/tmp/openrecoveryscript"))) {
                 status = INSTALL_SUCCESS;
@@ -996,11 +1009,10 @@ main(int argc, char **argv) {
             } else {
                 handle_failure(ret);
             }
+            no_wipe_confirm = 0; //script done, next ones cannot be bootscripts until we restart recovery
         } else {
             LOGI("Skipping execution of OpenRecoveryScript, file not found...\n");
         }
-        no_wipe_confirm = 0;
-        //script done, next ones cannot be bootscripts until we restart recovery
     }
 
     setup_adbd();

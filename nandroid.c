@@ -1,3 +1,14 @@
+/*****************************************/
+/*   DO NOT REMOVE THIS CREDITS HEARDER  */
+/* IF YOU MODIFY ANY PART OF THIS SOURCE */
+/*  YOU MUST AGREE TO SHARE THE CHANGES  */
+/*                                       */
+/*    TWRP backup and restore support    */
+/*                and                    */
+/*    Custom backup and restore support  */
+/*    Are part of PhilZ Touch Recovery   */
+/*****************************************/
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -61,7 +72,7 @@ void nandroid_generate_timestamp_path(const char* backup_path)
 
 void ensure_directory(const char* dir) {
     char tmp[PATH_MAX];
-    sprintf(tmp, "mkdir -p %s ; chmod 775 %s", dir, dir);
+    sprintf(tmp, "mkdir -p %s; chmod 775 %s;", dir, dir);
     __system(tmp);
 }
 
@@ -141,6 +152,8 @@ static int tar_compress_wrapper(const char* backup_path, const char* backup_file
         sprintf(tmp, "cd $(dirname %s) ; touch %s.tar ; (tar cv %s $(basename %s) | split -a 1 -b 1000000000 /proc/self/fd/0 %s.tar.) 2> /proc/self/fd/1 ; exit $?", backup_path, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "--exclude 'media'" : "", backup_path, backup_file_image);
     else
         sprintf(tmp, "cd $(dirname %s) ; touch %s.tar.gz ; (tar cv %s $(basename %s) | pigz -%d | split -a 1 -b 1000000000 /proc/self/fd/0 %s.tar.gz.) 2> /proc/self/fd/1 ; exit $?", backup_path, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "--exclude 'media'" : "", backup_path, compression_value, backup_file_image);
+    // users expect a nandroid backup to be like a raw image, should give choice to skip data...
+    //sprintf(tmp, "cd $(dirname %s) ; touch %s.tar ; (tar cv --exclude=data/data/com.google.android.music/files/* %s $(basename %s) | split -a 1 -b 1000000000 /proc/self/fd/0 %s.tar.) 2> /proc/self/fd/1 ; exit $?", backup_path, backup_file_image, strcmp(backup_path, "/data") == 0 && is_data_media() ? "--exclude 'media'" : "", backup_path, backup_file_image);
 
     FILE *fp = __popen(tmp, "r");
     if (fp == NULL) {
@@ -362,12 +375,13 @@ int nandroid_backup_partition(const char* backup_path, const char* root) {
 }
 
 
-/***************************************/
-/*  Custom Backup and Restore Support  */
-/*      code written by PhilZ @xda     */
-/*       for PhilZ Touch Recovery      */
-/*  Do not remove this credits header  */
-/***************************************/
+/*****************************************/
+/*   DO NOT REMOVE THIS CREDITS HEARDER  */
+/*                                       */
+/*   Custom Backup and Restore Support   */
+/*       code written by PhilZ @xda      */
+/*        for PhilZ Touch Recovery       */
+/*****************************************/
 
 //these general variables are needed to not break backup and restore by external script
 int backup_boot = 1, backup_recovery = 1, backup_wimax = 1, backup_system = 1, backup_preload = 1;
@@ -377,6 +391,7 @@ int is_custom_backup = 0;
 int reboot_after_nandroid = 0;
 int android_secure_ext = 0;
 
+int nandroid_add_preload = 0, enable_md5sum = 1;
 
 void finish_nandroid_job() {
     ui_print("Finalizing, please wait...\n");
@@ -469,13 +484,14 @@ int custom_restore_raw_handler(const char* backup_path, const char* root)
 //-------- end custom backup and restore functions
 
 
-/***********************************/
-/* TWRP backup and restore support */
-/* Original CWM port by PhilZ@xda  */
-/* Original TWRP code by Dees_Troy */
-/*       (dees_troy at yahoo)      */
-/*     Keep this credits header    */
-/***********************************/
+/*****************************************/
+/*   DO NOT REMOVE THIS CREDITS HEARDER  */
+/*                                       */
+/*    TWRP backup and restore support    */
+/*    Original CWM port by PhilZ@xda     */
+/*    Original TWRP code by Dees_Troy    */
+/*          (dees_troy at yahoo)         */
+/*****************************************/
 
 #define MAX_ARCHIVE_SIZE 4294967296LLU
 int Makelist_File_Count;
@@ -770,10 +786,7 @@ int twrp_backup(const char* backup_path)
         }
     }
 
-#ifdef PHILZ_TOUCH_RECOVERY
-    if (enable_md5sum)
-#endif
-    {
+    if (enable_md5sum) {
         if (0 != (ret = gen_twrp_md5sum(backup_path)))
             return ret;
     }
@@ -875,10 +888,7 @@ int twrp_restore(const char* backup_path)
         return print_and_error("Can't mount backup path\n");
 
     char tmp[PATH_MAX];
-#ifdef PHILZ_TOUCH_RECOVERY
-    if (enable_md5sum)
-#endif
-    {
+    if (enable_md5sum) {
         if (0 != check_twrp_md5sum(backup_path))
             return print_and_error("MD5 mismatch!\n");
     }
@@ -1020,12 +1030,7 @@ int nandroid_backup(const char* backup_path)
             return ret;
         }
     }
-    else if (!is_custom_backup
-#ifdef PHILZ_TOUCH_RECOVERY
-                && nandroid_add_preload
-#endif
-            )
-    {
+    else if (!is_custom_backup && nandroid_add_preload) {
         if (0 != (ret = nandroid_backup_partition(backup_path, "/preload"))) {
             ui_print("Failed to backup preload! Try to disable it.\n");
             ui_print("Skipping /preload...\n");
@@ -1043,7 +1048,7 @@ int nandroid_backup(const char* backup_path)
 
     // handle .android_secure on external and internal storage
     if (!is_custom_backup)
-        android_secure_ext = get_android_secure_path();
+        get_android_secure_path();
     if (backup_data && android_secure_ext == 0) {
         // android_secure_ext == 0: assume default /sdcard path
         if (is_data_media())
@@ -1084,10 +1089,7 @@ int nandroid_backup(const char* backup_path)
         }
     }
 
-#ifdef PHILZ_TOUCH_RECOVERY
-    if (enable_md5sum)
-#endif
-    {
+    if (enable_md5sum) {
         ui_print("Generating md5 sum...\n");
         sprintf(tmp, "nandroid-md5.sh %s", backup_path);
         if (0 != (ret = __system(tmp))) {
@@ -1450,11 +1452,7 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
         return print_and_error("Can't mount backup path\n");
     
     char tmp[PATH_MAX];
-
-#ifdef PHILZ_TOUCH_RECOVERY
-    if (enable_md5sum)
-#endif
-    {
+    if (enable_md5sum) {
         ui_print("Checking MD5 sums...\n");
         sprintf(tmp, "cd %s && md5sum -c nandroid.md5", backup_path);
         if (0 != __system(tmp))
@@ -1520,12 +1518,7 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
             return ret;
         }
     }
-    else if (!is_custom_backup
-#ifdef PHILZ_TOUCH_RECOVERY
-                && nandroid_add_preload
-#endif
-            )
-    {
+    else if (!is_custom_backup && nandroid_add_preload) {
         if (restore_system && 0 != (ret = nandroid_restore_partition(backup_path, "/preload"))) {
             ui_print("Failed to restore preload! Try to disable it.\n");
             ui_print("Skipping /preload...\n");
@@ -1543,15 +1536,15 @@ int nandroid_restore(const char* backup_path, int restore_boot, int restore_syst
 
     // handle .android_secure on external and internal storage
     if (!is_custom_backup)
-        android_secure_ext = get_android_secure_path();
-    if (backup_data && android_secure_ext == 0) {
+        get_android_secure_path();
+    if (restore_data && android_secure_ext == 0) {
         // android_secure_ext == 0: restore to default /sdcard path
         if (is_data_media())
             ui_print("Skipping android_secure restore to /data/media.\n");
         else if (0 != (ret = nandroid_restore_partition_extended(backup_path, "/sdcard/.android_secure", 0)))
             return ret;
     }
-    else if (backup_data && android_secure_ext == 1) {
+    else if (restore_data && android_secure_ext == 1) {
         // android_secure_ext == 1: restore to second storage
         if (volume_for_path("/external_sd") != NULL)
             ret = nandroid_restore_partition_extended(backup_path, "/external_sd/.android_secure", 0);
